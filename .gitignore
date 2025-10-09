@@ -1,0 +1,14 @@
+# Байт-код Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальные окружения
+venv/
+.env/
+
+# Настройки PyCharm
+.idea/
+
+# Локальные файлы
+.DS_Store
