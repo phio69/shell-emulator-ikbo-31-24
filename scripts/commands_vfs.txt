@@ -1,0 +1,5 @@
+ls
+cd /
+vfs-init
+ls
+exit

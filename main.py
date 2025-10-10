@@ -1,13 +1,15 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import re
 import shlex
 import argparse
+from pathlib import Path
 
 # Имя VFS по умолчанию
 VFS_NAME = "myvfs"
+
+# Глобальное состояние VFS
+current_vfs = {}
+current_vfs_path = None
 
 
 def expand_environment_variables(text: str) -> str:
@@ -30,10 +32,43 @@ def parse_user_input(user_input: str) -> list[str]:
         return []
 
 
+def load_vfs_from_directory(path: str) -> dict:
+    """
+    Рекурсивно загружает структуру директории в память в виде вложенного словаря.
+    Файлы представлены как строки с содержимым (или пустые строки при ошибке).
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"VFS: путь не найден: {path}")
+    if not os.path.isdir(path):
+        raise NotADirectoryError(f"VFS: путь не является директорией: {path}")
+
+    def _scan(current_path: Path) -> dict:
+        result = {}
+        for item in current_path.iterdir():
+            if item.is_file():
+                try:
+                    with open(item, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                except Exception:
+                    content = ""
+                result[item.name] = content
+            elif item.is_dir():
+                result[item.name] = _scan(item)
+        return result
+
+    return _scan(Path(path))
+
+
 def handle_command(command: str, args: list[str]) -> bool:
     """Обрабатывает команду. Возвращает False, если нужно завершить работу."""
+    global current_vfs, current_vfs_path
+
     if command == "exit":
         return False
+    elif command == "vfs-init":
+        current_vfs = {}
+        current_vfs_path = None
+        print("VFS сброшена на значение по умолчанию.")
     elif command == "ls":
         print("ls", *args)
     elif command == "cd":
@@ -79,26 +114,45 @@ def execute_script(script_path: str, command_handler):
                 break
         except Exception as e:
             print(f"Ошибка при выполнении строки {line_num}: {e}")
-            continue  # пропускаем ошибки
+            continue
 
     print("-" * 40)
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Эмулятор shell")
+    parser = argparse.ArgumentParser(description="Эмулятор shell (Вариант 21)")
     parser.add_argument("--vfs", type=str, help="Путь к физическому расположению VFS")
     parser.add_argument("--script", type=str, help="Путь к стартовому скрипту")
     return parser.parse_args()
 
 
 def main():
+    global current_vfs, current_vfs_path
     args = parse_arguments()
 
-    # Отладочный вывод параметров (требование Этапа 2)
     print("Параметры запуска:")
     print(f"  --vfs    = {args.vfs}")
     print(f"  --script = {args.script}")
     print()
+
+    # Загрузка VFS из директории, если указан путь
+    if args.vfs:
+        try:
+            current_vfs = load_vfs_from_directory(args.vfs)
+            current_vfs_path = args.vfs
+            print(f"VFS успешно загружена из: {args.vfs}")
+        except (FileNotFoundError, NotADirectoryError) as e:
+            print(f"Ошибка загрузки VFS: {e}")
+            current_vfs = {}
+            current_vfs_path = None
+        except Exception as e:
+            print(f"Неизвестная ошибка при загрузке VFS: {e}")
+            current_vfs = {}
+            current_vfs_path = None
+    else:
+        current_vfs = {}
+        current_vfs_path = None
+        print("ℹ️  Используется VFS по умолчанию (пустая).")
 
     # Если указан скрипт — выполняем его и завершаем работу
     if args.script:
