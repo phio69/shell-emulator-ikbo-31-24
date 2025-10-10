@@ -1,0 +1,16 @@
+# Тест команд Этапа 4
+ls
+cd level1
+ls
+cd level2
+ls
+cd ../..
+ls
+wc file.txt
+wc docs/readme.txt
+wc nonexistent.txt
+whoami
+date
+cd /nonexistent
+ls
+exit
