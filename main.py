@@ -79,8 +79,10 @@ def handle_command(command: str, args: list[str]) -> bool:
         return False
 
     elif command == "vfs-init":
+        global current_vfs, current_vfs_path, current_dir
         current_vfs = {}
         current_vfs_path = None
+        current_dir = []
         print("VFS сброшена на значение по умолчанию.")
 
     elif command == "ls":
@@ -159,7 +161,6 @@ def handle_command(command: str, args: list[str]) -> bool:
             # Проходим по всем частям пути, кроме последней
             for part in parts[:-1]:
                 if part == "..":
-                    # Для простоты — пока не поддерживаем ".." в путях файлов
                     raise NotImplementedError("Поддержка '..' в путях файлов пока не реализована")
                 elif part == "." or not part:
                     continue
@@ -188,23 +189,40 @@ def handle_command(command: str, args: list[str]) -> bool:
         except Exception as e:
             print(f"wc: ошибка чтения файла {path}: {e}")
 
-        filename = args[0]
+    elif command == "mkdir":
+        if not args:
+            print("mkdir: отсутствует операнд")
+            return True
+
+        dirname = args[0]
+        if '/' in dirname:
+            print("mkdir: создание вложенных директорий не поддерживается")
+            return True
+
         try:
             current = get_current_directory()
-            if filename not in current:
-                print(f"wc: {filename}: Нет такого файла или каталога")
+            if dirname in current:
+                print(f"mkdir: невозможно создать директорию «{dirname}»: Файл существует")
                 return True
-            content = current[filename]
-            if not isinstance(content, str):
-                print(f"wc: {filename}: Это каталог")
-                return True
-
-            lines = len(content.splitlines())
-            words = len(content.split())
-            chars = len(content)
-            print(f"{lines:4} {words:4} {chars:4} {filename}")
+            current[dirname] = {}  # создаём пустую папку
+            print(f"Директория «{dirname}» создана.")
         except Exception as e:
-            print(f"wc: ошибка чтения файла {filename}: {e}")
+            print(f"mkdir: ошибка создания директории: {e}")
+
+    elif command == "vfs-load":
+        if not args:
+            print("vfs-load: отсутствует путь к VFS")
+            return True
+
+        new_vfs_path = args[0]
+        try:
+            new_vfs = load_vfs_from_directory(new_vfs_path)
+            current_vfs = new_vfs
+            current_vfs_path = new_vfs_path
+            current_dir = []  # сброс текущей директории
+            print(f"VFS успешно загружена из: {new_vfs_path}")
+        except Exception as e:
+            print(f"Ошибка загрузки VFS: {e}")
 
     else:
         print(f"Ошибка: неизвестная команда '{command}'")

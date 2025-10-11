@@ -1,0 +1,12 @@
+# Тест Этапа 5
+ls
+mkdir newdir
+ls
+mkdir newdir
+mkdir "dir with spaces"
+ls
+vfs-load vfs_examples/second
+ls
+vfs-load /несуществующая/папка
+ls
+exit
